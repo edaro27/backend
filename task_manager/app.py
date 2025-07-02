@@ -1,8 +1,8 @@
-from flask import Flask
+from flask import Flask, request
 
 app = Flask(__name__)
 
-task_list=[{"id":1, "name":"clean"}, {"id":2, "name": "sweep"}]
+task_list=[]
 
 @app.route('/')
 def index():
@@ -14,8 +14,22 @@ def tasks():
 
 @app.route('/tasks/<id>')
 def task_id(id):
-    index = int(id)-1
-    return task_list[index]["name"]
+    for item in task_list:
+        if item["id"] == int(id):
+            return item["name"]
+    return "No tasks have that id"
+
+@app.route('/tasks/post_task', methods=['POST'])
+def post_task():
+    data = request.get_json()
+    task_list.append({"id": data["id"], "name": data["name"]})
+
+    response = {
+        "received": data,
+        "message": "JSON received"
+    }
+
+    return response
 
 if __name__ == "__main__":
     app.run(debug=True)
