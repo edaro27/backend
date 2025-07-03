@@ -1,4 +1,5 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
+import random
 
 app = Flask(__name__)
 
@@ -10,26 +11,33 @@ def index():
 
 @app.route('/tasks')
 def tasks():
-    return task_list
+    return jsonify(task_list)
 
 @app.route('/tasks/<id>')
-def task_id(id):
+def get_task(id):
+    task_id = int(id)
     for item in task_list:
-        if item["id"] == int(id):
-            return item["name"]
+        if item["id"] == task_id:
+            return jsonify({"name":item["name"]})
     return "No tasks have that id"
 
 @app.route('/tasks/post_task', methods=['POST'])
 def post_task():
-    data = request.get_json()
-    task_list.append({"id": data["id"], "name": data["name"]})
+    print(f"There was a {request.method} request")
+    print(f"The parameters are:{request.args}")
 
+    data = request.get_json()
+
+    #Creates random ID and assigns is to the new task
+    new_id = random.randint(1,100)
+    task_list.append({"id": new_id, "name": data["name"]})
+    
     response = {
-        "received": data,
+        "Received": data,
+        "New Task ID": new_id,
         "message": "JSON received"
     }
-
-    return response
+    return jsonify(response)
 
 if __name__ == "__main__":
     app.run(debug=True)
