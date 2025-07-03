@@ -31,7 +31,7 @@ def post_task():
     #Creates random ID and assigns is to the new task
     new_id = random.randint(1,100)
     task_list.append({"id": new_id, "name": data["name"]})
-    
+
     response = {
         "Received": data,
         "New Task ID": new_id,
@@ -41,3 +41,14 @@ def post_task():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+
+
+"""
+Sample curl request
+
+curl -X POST http://127.0.0.1:5000/tasks/post_task \
+-H "Content-Type: application/json" \
+-d '{"name": "Jill Li"}'
+
+"""
