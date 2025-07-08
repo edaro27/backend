@@ -1,0 +1,11 @@
+Relational database organizes data into one or more tables
+Each table has columns and rows
+A unique key identifies each rows
+
+Non relational database
+Not a traditional table. Can have key-value stores, documents, graphs, flexible tables
+
+Need RDBMS
+
+A foreign key is the primary key of another table
+A composite key needs 2 attributes. Only together can they uniquely identify the table
