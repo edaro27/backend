@@ -21,14 +21,12 @@ def index():
 
 #GET returns a list of all tasks
 @app.route('/tasks')
-def tasks():
+def get_tasks():
     with sqlite3.connect(DATABASE) as conn:
         c = conn.cursor()
         c.execute("SELECT * FROM tasks")
         task_list = c.fetchall()
-        response = {}
-        for task in task_list: #each task is a tuple: (id, task)
-            response[task[0]] = task[1]
+        response = [{"id": task[0], "task": task[1]} for task in task_list]
         return jsonify(response)
 
 #GET retrieves the task based on the id
