@@ -6,19 +6,12 @@ DATABASE = 'tasks.db'
 
 task_list=[]
 
-#When app restarts, if there is already a table, grab largest id
-# with sqlite3.connect(DATABASE) as conn:
-#     c = conn.cursor()
-#     c.execute("SELECT MAX(id) FROM tasks")
-#     max_id = c.fetchall()
-#     print(max_id)
-
-global id_count
+id_count = 0
 
 #GET retrieves a list of all tasks
 #POST creates a new task that was typed in the form
 @app.route('/', methods = ['POST', 'GET'])
-def index(id_count):
+def index():
     if request.method == 'POST':
         task_content = request.form['content']
         id_count = id_count+1
@@ -34,7 +27,7 @@ def tasks():
         c.execute("SELECT * FROM tasks")
         task_list = c.fetchall()
         response = {}
-        for task in task_list: #each task is a tuple: (1, pony)
+        for task in task_list: #each task is a tuple: (id, task)
             response[task[0]] = task[1]
         return jsonify(response)
 
@@ -54,18 +47,16 @@ def post_task():
     #print(f"The parameters are:{request.args}")
 
     data = request.get_json()
-    global id_count
-    id_count += 1
-    # task_list.append({"id": new_id, "task": data["task"]})
 
 # use with as context manager
     with sqlite3.connect(DATABASE) as conn:
         c = conn.cursor()
-        c.execute("INSERT INTO tasks VALUES (:id, :task)",{'id':id_count, 'task':data["task"]})
-
+        c.execute("INSERT INTO tasks (task) VALUES (:task)",{'task':data["task"]})
+        new_id = c.lastrowid
+    
     response = {
         "Received": data,
-        "New Task ID": id_count,  
+        "New Task ID": new_id,  
         "message": "JSON received"
     }
     return jsonify(response)
@@ -91,12 +82,12 @@ def delete_task(id):
 
 if __name__ == "__main__":
     #Initialize db and create table if it doesn't exist
+    #Grab largest id value if table is populated
     with sqlite3.connect(DATABASE) as conn:
         c = conn.cursor()
-        c.execute('''CREATE TABLE IF NOT EXISTS tasks (id INTEGER, task TEXT)''')
-        c.execute("SELECT MAX(id) FROM tasks")
-        max_id = c.fetchone()
-        id_count = max_id[0]
+        c.execute('''CREATE TABLE IF NOT EXISTS tasks (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                  task TEXT NOT NULL)''')
         conn.commit()
 
     app.run(debug=True)
