@@ -14,8 +14,18 @@ id_count = 0
 def index():
     if request.method == 'POST':
         task_content = request.form['content']
-        id_count = id_count+1
-        task_list.append({"id": id_count, "task": task_content})
+        default_user_id = 1
+        with sqlite3.connect(DATABASE) as conn:
+            c = conn.cursor()
+            c.execute("INSERT INTO tasks (task_title, user_id) VALUES (:task_title, :user_id)", {"task_title": task_content, "user_id": default_user_id})
+            conn.commit()
+        return redirect('/')
+
+    with sqlite3.connect(DATABASE) as conn:
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute("SELECT task_id, task_title FROM tasks")
+        task_list = c.fetchall()
 
     return render_template("index.html", task_list=task_list)
 
@@ -26,17 +36,25 @@ def get_tasks():
         c = conn.cursor()
         c.execute("SELECT * FROM tasks")
         task_list = c.fetchall()
-        response = [{"id": task[0], "task": task[1]} for task in task_list]
+        response = [{"task_id": task[0], "task_title": task[1], "task_status": task[2], "user_id": task[3], "created_at": task[5]} for task in task_list]
         return jsonify(response)
+
+#         task_id INTEGER PRIMARY KEY AUTOINCREMENT,
+#         task_title TEXT NOT NULL,
+#         task_status TEXT CHECK(task_status IN('pending','in_progress','done')) NOT NULL DEFAULT 'pending',
+#         user_id INTEGER NOT NULL,
+#         due_date DATETIME,
+#         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 
 #GET retrieves the task based on the id
 @app.route('/tasks/<id>')
 def get_task(id):
     task_id = int(id)
-    for item in task_list:
-        if item["id"] == task_id:
-            return jsonify({"task":item["task"]})
-    return "No tasks have that id"
+    with sqlite3.connect(DATABASE) as conn:
+        c = conn.cursor()
+        c.execute("SELECT task_title FROM tasks WHERE task_id = :task_id", {'task_id':task_id}) #Placeholders good for multiple parameters, readable, less error-prone
+        task_title = c.fetchone()
+        return jsonify({"task_title": task_title[0]})
 
 #POST creates a new task by passing JSON to the API
 @app.route('/tasks/', methods=['POST'])
@@ -49,8 +67,9 @@ def post_task():
 # use with as context manager
     with sqlite3.connect(DATABASE) as conn:
         c = conn.cursor()
-        c.execute("INSERT INTO tasks (task) VALUES (:task)",{'task':data["task"]})
+        c.execute("INSERT INTO tasks (task_title, user_id) VALUES (:task_title, :user_id)",{'task_title':data["task_title"], 'user_id':data["user_id"]})
         new_id = c.lastrowid
+        conn.commit()
     
     response = {
         "Received": data,
@@ -63,20 +82,27 @@ def post_task():
 @app.route('/tasks/<id>', methods=['PUT'])
 def update_task(id):
     data = request.get_json()
-    item_id = int(id)-1
-    task_list[item_id] = {"id":id, "task": data["task"]}
-    return task_list[item_id]
+    task_id = int(id)
+    with sqlite3.connect(DATABASE) as conn:
+        c = conn.cursor()
+        c.execute("UPDATE tasks SET task_title = :task_title WHERE task_id = :task_id", {'task_title':data['task_title'], 'task_id':task_id}) 
+        conn.commit()
+        return {"message": "Task updated", "task_id": task_id, "new_title": data['task_title']}, 200
 
 #DELETE removes a task
 @app.route('/tasks/<id>', methods=['DELETE'])
 def delete_task(id):
-    item_id = int(id)
-    for i in task_list:
-        if i["id"] == item_id:
-            removed_index = task_list.index(i)
-            del task_list[removed_index]
-            return task_list
+    task_id = int(id)
+    with sqlite3.connect(DATABASE) as conn:
+        c = conn.cursor()
+        c.execute("DELETE from tasks WHERE task_id = :task_id", {'task_id':task_id}) 
+        conn.commit()
+
+        if c.rowcount == 0:
+            return {"error": "Task not found"}, 404
         
+        return {"message": "Task deleted", "task_id": task_id}, 200
+
 
 if __name__ == "__main__":
     #Initialize db and create table if it doesn't exist
@@ -97,6 +123,6 @@ Sample curl request
 
 curl -X POST http://127.0.0.1:5000/tasks/post_task \
 -H "Content-Type: application/json" \
--d '{"task": "Jill Li"}'
+-d '{"task_title": "Jill Li"}'
 
 """
