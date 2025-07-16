@@ -110,10 +110,23 @@ if __name__ == "__main__":
     with sqlite3.connect(DATABASE) as conn:
         c = conn.cursor()
         c.execute('''CREATE TABLE IF NOT EXISTS tasks (
-                  id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                  task TEXT NOT NULL)''')
+                    task_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    task_title TEXT NOT NULL,
+                    task_status TEXT CHECK(task_status IN('pending','in_progress','done')) NOT NULL DEFAULT 'pending',
+                    user_id INTEGER NOT NULL,
+                    due_date DATETIME,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    
+                    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+                    )''')
+        c.execute('''
+                    CREATE TABLE IF NOT EXISTS users (
+                    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_name TEXT NOT NULL
+                    )      
+                  '''
+                  )
         conn.commit()
-
     app.run(debug=True)
 
 
